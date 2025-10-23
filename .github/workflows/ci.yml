@@ -2,15 +2,11 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: main
+    branches:
+      - main
 
-# Define a single secret for the entire workflow that will be passed to the jobs
-# You must set this secret in your repository or organization settings
-# Secrets are not automatically inherited by reusable workflows unless 'secrets: inherit' is used,
-# but since both of your workflows explicitly define a 'jfrog-access-token' secret,
-# we pass it explicitly to each job.
+# Define reusable variables/inputs for the workflows at the workflow level
 env:
-  # Define reusable variables/inputs for the workflows
   JFROG_URL: https://hts2.jfrog.io
   NPM_REPOSITORY: manu-npm-virtual
   ARTIFACT_REPOSITORY: manu-generic-local
@@ -46,49 +42,58 @@ jobs:
           name: built-project-artifact # The artifact name to be downloaded later
           path: dist/
 
+
   # Job to publish the NPM package using npm-publish.yml
   publish-npm:
     name: Publish NPM
     needs: build-and-test # Depends on build-and-test completing successfully
+    
+    # FIX 1: Define job-level env to make workflow-level variables accessible in 'with'
+    env:
+      NPM_REPOSITORY: ${{ env.NPM_REPOSITORY }}
+      JFROG_URL: ${{ env.JFROG_URL }}
+      
     uses: ./.github/workflows/npm-publish.yml # Local call syntax
     with:
-      # Required Inputs
+      # Required Inputs (Line 56 & 57 fix)
       jfrog-npm-repository: ${{ env.NPM_REPOSITORY }}
       jfrog-url: ${{ env.JFROG_URL }}
       
       # Optional Inputs (using defaults or branch context)
       node-version: '24'
       package-json-file-path: 'package.json'
-      # Set prerelease logic based on the branch (e.g., if not main)
-      prerelease: ${{ github.ref != 'refs/heads/main' }} 
+      prerelease: ${{ github.ref != 'refs/heads/main' }}
       npm-distribution-tag: ${{ github.ref == 'refs/heads/main' && 'latest' || '' }}
 
     secrets:
-      # Required Secret
-      jfrog-access-token: ${{ env.JFROG_ACCESS_TOKEN }} 
+      # FIX 2: Secrets must be accessed using the standard 'secrets.' context (Line 68 fix)
+      jfrog-access-token: ${{ secrets.JFROG_ACCESS_TOKEN }}
+
+
 
   # Job to upload the built artifact using jfrog-artifact-upload.yml
   upload-artifact:
     name: Upload to JFrog
     needs: build-and-test # Depends on build-and-test completing successfully
+    
+    # FIX 1: Define job-level env to make workflow-level variables accessible in 'with'
+    env:
+      JFROG_URL: ${{ env.JFROG_URL }}
+      ARTIFACT_REPOSITORY: ${{ env.ARTIFACT_REPOSITORY }}
+      ARTIFACT_TARGET_PATH: ${{ env.ARTIFACT_TARGET_PATH }}
+      
     uses: ./.github/workflows/jfrog-artifact-upload.yml # Local call syntax
     with:
-      # Required Inputs
+      # Required Inputs (Line 77, 78, & 80 fixes)
       jfrog-url: ${{ env.JFROG_URL }}
       jfrog-repository: ${{ env.ARTIFACT_REPOSITORY }}
       workflow-artifact-name: built-project-artifact # Must match the name in the upload step
       artifact-target-path: ${{ env.ARTIFACT_TARGET_PATH }}
 
       # Optional Inputs
-      # jfrog-build-name: (defaults to ${{ github.repository }})
-      # jfrog-build-number: (defaults to ${{ github.workflow }}-${{ github.run_number }})
       artifact-source-path: temp/built-project-artifact/dist/ # Path relative to download-artifact's 'path'
       archive-artifact: 'zip' # Archives the files into a ZIP
 
     secrets:
-      # Required Secret
-      jfrog-access-token: ${{ env.JFROG_ACCESS_TOKEN }}
-    
-    # Capture outputs from the reusable workflow if needed for later jobs
-    # outputs:
-    #   path: ${{ steps.upload.outputs.artifact-path }}
+      # FIX 2: Secrets must be accessed using the standard 'secrets.' context (Line 90 fix)
+      jfrog-access-token: ${{ secrets.JFROG_ACCESS_TOKEN }}
