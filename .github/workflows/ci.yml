@@ -10,7 +10,7 @@ env:
   ARTIFACT_TARGET_PATH: my-project/v1/latest
 
 jobs:
-  # Job to run your tests/build that generates an artifac
+  # Job to run your tests/build that generates an artifact
   build-and-test:
     runs-on: ubuntu-latest
     steps:
