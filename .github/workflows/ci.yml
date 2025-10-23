@@ -4,7 +4,7 @@ on:
   push:
     branches: main
 
-# Define a single secret for the entire workflow that will be passed to the job
+# Define a single secret for the entire workflow that will be passed to the jobs
 # You must set this secret in your repository or organization settings
 # Secrets are not automatically inherited by reusable workflows unless 'secrets: inherit' is used,
 # but since both of your workflows explicitly define a 'jfrog-access-token' secret,
