@@ -1,0 +1,45 @@
+name: 'NPM Publish Action'
+description: 'Publish an NPM package to a specified registry.'
+author: 'Your Name'
+
+inputs:
+  jfrog-npm-repository:
+    description: 'The name of the JFrog NPM repository.'
+    required: true
+    default: 'manu-npm-virtual'
+  
+  jfrog-url:
+    description: 'The URL of the JFrog Artifactory.'
+    required: true
+    default: 'https://hts2.jfrog.io'
+
+  node-version:
+    description: 'Node.js version to use for publishing.'
+    required: true
+    default: '14'
+
+  package-json-file-path:
+    description: 'Path to the package.json file.'
+    required: true
+    default: 'package.json'
+
+  prerelease:
+    description: 'Indicates if this is a prerelease version.'
+    required: false
+    default: 'false'
+
+  npm-distribution-tag:
+    description: 'The distribution tag for npm (e.g., latest).'
+    required: false
+    default: 'latest'
+
+runs:
+  using: 'node12'
+  main: 'lib/index.js'
+
+branding:
+  icon: 'package'
+  color: 'blue'
+
+permissions:
+  contents: 'read' # Necessary if you need to read repository contents
