@@ -11,9 +11,9 @@
   "author": "Your Name",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.17.1"  // Example dependency, modify as necessary
+    "express": "^4.17.1"  
   },
   "devDependencies": {
-    "jest": "^27.0.0"  // Example dev dependency, modify as necessary
+    "jest": "^27.0.0" 
   }
 }
