@@ -1,0 +1,94 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: main
+
+# Define a single secret for the entire workflow that will be passed to the job
+# You must set this secret in your repository or organization settings
+# Secrets are not automatically inherited by reusable workflows unless 'secrets: inherit' is used,
+# but since both of your workflows explicitly define a 'jfrog-access-token' secret,
+# we pass it explicitly to each job.
+env:
+  # Define reusable variables/inputs for the workflows
+  JFROG_URL: https://hts2.jfrog.io
+  NPM_REPOSITORY: manu-npm-virtual
+  ARTIFACT_REPOSITORY: manu-generic-local
+  ARTIFACT_TARGET_PATH: my-project/v1/latest
+
+jobs:
+  # Job to run your tests/build that generates an artifact
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24' # Use a standard Node version
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests (or build)
+        run: |
+          echo "Running tests..."
+          # Replace with your actual test/build command
+          mkdir -p dist
+          echo "Build content" > dist/artifact.txt
+          echo "Tests passed and build finished."
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-project-artifact # The artifact name to be downloaded later
+          path: dist/
+
+  # Job to publish the NPM package using npm-publish.yml
+  publish-npm:
+    name: Publish NPM
+    needs: build-and-test # Depends on build-and-test completing successfully
+    uses: ./.github/workflows/npm-publish.yml # Local call syntax
+    with:
+      # Required Inputs
+      jfrog-npm-repository: ${{ env.NPM_REPOSITORY }}
+      jfrog-url: ${{ env.JFROG_URL }}
+      
+      # Optional Inputs (using defaults or branch context)
+      node-version: '24'
+      package-json-file-path: 'package.json'
+      # Set prerelease logic based on the branch (e.g., if not main)
+      prerelease: ${{ github.ref != 'refs/heads/main' }} 
+      npm-distribution-tag: ${{ github.ref == 'refs/heads/main' && 'latest' || '' }}
+
+    secrets:
+      # Required Secret
+      jfrog-access-token: ${{ secrets.JFROG_ACCESS_TOKEN }} 
+
+  # Job to upload the built artifact using jfrog-artifact-upload.yml
+  upload-artifact:
+    name: Upload to JFrog
+    needs: build-and-test # Depends on build-and-test completing successfully
+    uses: ./.github/workflows/jfrog-artifact-upload.yml # Local call syntax
+    with:
+      # Required Inputs
+      jfrog-url: ${{ env.JFROG_URL }}
+      jfrog-repository: ${{ env.ARTIFACT_REPOSITORY }}
+      workflow-artifact-name: built-project-artifact # Must match the name in the upload step
+      artifact-target-path: ${{ env.ARTIFACT_TARGET_PATH }}
+
+      # Optional Inputs
+      # jfrog-build-name: (defaults to ${{ github.repository }})
+      # jfrog-build-number: (defaults to ${{ github.workflow }}-${{ github.run_number }})
+      artifact-source-path: temp/built-project-artifact/dist/ # Path relative to download-artifact's 'path'
+      archive-artifact: 'zip' # Archives the files into a ZIP
+
+    secrets:
+      # Required Secret
+      jfrog-access-token: ${{ secrets.JFROG_ACCESS_TOKEN }}
+    
+    # Capture outputs from the reusable workflow if needed for later jobs
+    # outputs:
+    #   path: ${{ steps.upload.outputs.artifact-path }}
