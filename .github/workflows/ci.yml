@@ -65,7 +65,7 @@ jobs:
 
     secrets:
       # Required Secret
-      jfrog-access-token: ${{ secrets.JFROG_ACCESS_TOKEN }} 
+      jfrog-access-token: ${{ env.JFROG_ACCESS_TOKEN }} 
 
   # Job to upload the built artifact using jfrog-artifact-upload.yml
   upload-artifact:
@@ -87,7 +87,7 @@ jobs:
 
     secrets:
       # Required Secret
-      jfrog-access-token: ${{ secrets.JFROG_ACCESS_TOKEN }}
+      jfrog-access-token: ${{ env.JFROG_ACCESS_TOKEN }}
     
     # Capture outputs from the reusable workflow if needed for later jobs
     # outputs:
